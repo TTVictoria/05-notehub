@@ -7,7 +7,6 @@ import SearchBox from "../SearchBox/SearchBox";
 import NoteList from "../NoteList/NoteList";
 import Pagination from "../Pagination/Pagination";
 import NoteModal from "../NoteModal/NoteModal";
-import Loader from "../Loader/Loader";
 import toast, { Toaster } from "react-hot-toast";
 
 export default function App() {
@@ -15,7 +14,7 @@ export default function App() {
   const [search, setSearch] = useState<string>("");
   const [debouncedSearch] = useDebounce(search, 300);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const { data, isSuccess, isLoading, error, isError } = useQuery({
+  const { data, isSuccess, error, isError } = useQuery({
     queryKey: ["note", debouncedSearch, page],
     queryFn: () => fetchNotes(debouncedSearch, page),
     placeholderData: keepPreviousData,
@@ -62,7 +61,6 @@ export default function App() {
             Create note +
           </button>
         </header>
-        {isLoading && <Loader />}
         {isSuccess && data.notes.length > 0 && <NoteList notes={data.notes} />}
       </div>
       {isModalOpen && <NoteModal onClose={closeForm} />}
