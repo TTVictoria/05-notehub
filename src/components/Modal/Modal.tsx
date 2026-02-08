@@ -1,41 +1,48 @@
-import { createPortal } from "react-dom";
-import { useEffect } from "react";
-import css from "./Modal.module.css";
-import NoteForm from "../NoteForm/NoteForm";
+import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import css from './Modal.module.css';
 
-interface NoteModalProps {
-  onClose: () => void;
+export interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    children: ReactNode;
 }
 
-export default function NoteModal({ onClose }: NoteModalProps) {
-  const handleBackDropClose = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+function Modal({ isOpen, onClose, children }: ModalProps) {
+    useEffect(() => {
+        if (!isOpen) return;
 
-  return createPortal(
-    <>
-      <div
-        className={css.backdrop}
-        role="dialog"
-        aria-modal="true"
-        onClick={handleBackDropClose}
-      >
-        <div className={css.modal}>
-          <NoteForm cancel={onClose} />
-        </div>
-      </div>
-    </>,
-    document.body
-  );
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        const handleBackdropClick = (e: MouseEvent) => {
+            if ((e.target as Element).classList.contains(css.backdrop)) {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        document.addEventListener('mousedown', handleBackdropClick);
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener('mousedown', handleBackdropClick);
+        document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return createPortal(
+        <div className={css.backdrop} role="dialog" aria-modal="true">
+            <div className={css.modal}>{children}</div>
+        </div>,
+        document.body
+    );
 }
+
+export default Modal;
