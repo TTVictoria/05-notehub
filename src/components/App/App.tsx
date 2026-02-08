@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useDebouncedCallback } from "use-debounce";
 import { useState } from "react";
 import { Toaster } from "react-hot-toast";
+
 import css from "./App.module.css";
 import { fetchNotes } from "../../services/noteService";
 
@@ -14,62 +15,57 @@ import ErrorMessage from "../ErrorMessage/ErrorMessage";
 import SearchBox from "../SearchBox/SearchBox";
 
 function App() {
-  const [page, setPage] = useState<number>(1);
-  const [perPage] = useState<number>(12);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(12);
   const [search, setSearch] = useState("");
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data, isLoading, isError, isSuccess, isFetching } = useQuery({
+  const { data, isLoading, isError, isFetching, isSuccess } = useQuery({
     queryKey: ["notes", page, search],
     queryFn: () => fetchNotes(page, perPage, search),
     placeholderData: keepPreviousData,
   });
 
-  const debouncedSearch = useDebouncedCallback(
+  const handleSearch = useDebouncedCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setPage(1);
       setSearch(event.target.value);
     },
-    1000
+    500
   );
-  const handlePageChange = (page: number) => {
-    setPage(page);
-  };
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
-        <SearchBox search={search} onChange={debouncedSearch} />
-        <Toaster position="top-right" />
-        {isModalOpen && (
-          <Modal onClose={closeModal}>
-            <NoteForm onClose={closeModal} />
-          </Modal>
-        )}
-        {(isLoading || isFetching) && (
-          <strong>
-            <Loader />
-          </strong>
-        )}
-        {isError && (
-          <p>
-            <ErrorMessage />
-          </p>
-        )}
-        {isSuccess && data.totalPages > 1 && (
-          <Pagination
-            currentPage={page}
-            totalPages={data.totalPages}
-            onPageChange={handlePageChange}
-          />
-        )}
-        <button onClick={openModal} className={css.button}>
+        <SearchBox search={search} onChange={handleSearch} />
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
           Create note +
         </button>
       </header>
-      {isSuccess && data.notes.length > 0 && <NoteList notes={data.notes} />}
+
+      {(isLoading || isFetching) && <Loader />}
+      {isError && <ErrorMessage />}
+
+      {isSuccess && data.notes.length > 0 && (
+        <>
+          <NoteList notes={data.notes} />
+          {data.totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={data.totalPages}
+              onPageChange={setPage}
+            />
+          )}
+        </>
+      )}
+
+      {isModalOpen && (
+        <Modal onClose={() => setIsModalOpen(false)}>
+          <NoteForm onClose={() => setIsModalOpen(false)} />
+        </Modal>
+      )}
+
+      <Toaster position="top-right" />
     </div>
   );
 }
