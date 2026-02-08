@@ -1,73 +1,72 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useDebouncedCallback } from "use-debounce";
-import { useState } from "react";
-import { Toaster } from "react-hot-toast";
-
 import css from "./App.module.css";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchNotes } from "../../services/noteService";
-
+import { useEffect, useState } from "react";
+import { useDebounce } from "use-debounce";
+import SearchBox from "../SearchBox/SearchBox";
 import NoteList from "../NoteList/NoteList";
 import Pagination from "../Pagination/Pagination";
 import Modal from "../Modal/Modal";
-import NoteForm from "../NoteForm/NoteForm";
 import Loader from "../Loader/Loader";
-import ErrorMessage from "../ErrorMessage/ErrorMessage";
-import SearchBox from "../SearchBox/SearchBox";
+import toast, { Toaster } from "react-hot-toast";
 
-function App() {
-  const [page, setPage] = useState(1);
-  const [perPage] = useState(12);
-  const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const { data, isLoading, isError, isFetching, isSuccess } = useQuery({
-    queryKey: ["notes", page, search],
-    queryFn: () => fetchNotes(page, perPage, search),
+export default function App() {
+  const [page, setPage] = useState<number>(1);
+  const [search, setSearch] = useState<string>("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const { data, isSuccess, isLoading, error, isError } = useQuery({
+    queryKey: ["note", debouncedSearch, page],
+    queryFn: () => fetchNotes(debouncedSearch, page),
     placeholderData: keepPreviousData,
   });
 
-  const handleSearch = useDebouncedCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setPage(1);
-      setSearch(event.target.value);
-    },
-    500
-  );
+  useEffect(() => {
+    if (isError && error) {
+      toast.error(`Something went wrong.. try again later`, {
+        id: "fetch-error",
+      });
+    }
+  }, [isError, error]);
+
+  const handleSearch = (newSearch: string) => {
+    setSearch(newSearch);
+    setPage(1);
+  };
+
+  const totalPages = data?.totalPages ?? 0;
+
+  const openForm = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsModalOpen(false);
+  };
 
   return (
-    <div className={css.app}>
-      <header className={css.toolbar}>
-        <SearchBox search={search} onChange={handleSearch} />
-        <button className={css.button} onClick={() => setIsModalOpen(true)}>
-          Create note +
-        </button>
-      </header>
-
-      {(isLoading || isFetching) && <Loader />}
-      {isError && <ErrorMessage />}
-
-      {isSuccess && data.notes.length > 0 && (
-        <>
-          <NoteList notes={data.notes} />
-          {data.totalPages > 1 && (
-            <Pagination
-              currentPage={page}
-              totalPages={data.totalPages}
-              onPageChange={setPage}
-            />
+    <>
+      <div className={css.app}>
+        <header className={css.toolbar}>
+          <SearchBox onSearch={handleSearch} value={search} />
+          {isSuccess && data.notes.length === 0 && (
+            <>
+              <span> No Match found</span>
+            </>
           )}
-        </>
-      )}
+          {isSuccess && totalPages > 1 && (
+            <Pagination totalPages={totalPages} page={page} onPage={setPage} />
+          )}
 
-      {isModalOpen && (
-        <Modal onClose={() => setIsModalOpen(false)}>
-          <NoteForm onClose={() => setIsModalOpen(false)} />
-        </Modal>
-      )}
-
-      <Toaster position="top-right" />
-    </div>
+          <button className={css.button} onClick={openForm}>
+            Create note +
+          </button>
+        </header>
+        {isLoading && <Loader />}
+        {isSuccess && data.notes.length > 0 && <NoteList notes={data.notes} />}
+      </div>
+      {isModalOpen && <Modal onClose={closeForm} />}
+      {<Toaster />}
+    </>
   );
 }
-
-export default App;

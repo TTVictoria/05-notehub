@@ -3,15 +3,12 @@ import { createPortal } from 'react-dom';
 import css from './Modal.module.css';
 
 export interface ModalProps {
-    isOpen: boolean;
     onClose: () => void;
-    children: ReactNode;
+    children?: ReactNode; // children делаем необязательным
 }
 
-function Modal({ isOpen, onClose, children }: ModalProps) {
+function Modal({ onClose, children }: ModalProps) {
     useEffect(() => {
-        if (!isOpen) return;
-
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose();
@@ -29,17 +26,17 @@ function Modal({ isOpen, onClose, children }: ModalProps) {
         document.body.style.overflow = 'hidden';
 
         return () => {
-        document.removeEventListener('keydown', handleEscape);
-        document.removeEventListener('mousedown', handleBackdropClick);
-        document.body.style.overflow = 'unset';
+            document.removeEventListener('keydown', handleEscape);
+            document.removeEventListener('mousedown', handleBackdropClick);
+            document.body.style.overflow = 'unset';
         };
-    }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
+    }, [onClose]);
 
     return createPortal(
         <div className={css.backdrop} role="dialog" aria-modal="true">
-            <div className={css.modal}>{children}</div>
+            <div className={css.modal}>
+                {children}
+            </div>
         </div>,
         document.body
     );
